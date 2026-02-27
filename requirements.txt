@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+pdf2image
+pymupdf
+pytesseract
+pillow
+faiss-cpu
+
+langchain
+langchain-core
+langchain-community
+langchain-text-splitters
+langchain-nvidia-ai-endpoints
+
+python-dotenv
+pydantic

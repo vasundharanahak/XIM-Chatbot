@@ -86,60 +86,26 @@ def clean_text(text):
 # =====================================================
 
 def extract_pdf(pdf_path):
-
     text = ""
-
     try:
-
         doc = fitz.open(pdf_path)
-
-        text = "\n".join(
-            page.get_text()
-            for page in doc
-        )
-
+        text = "\n".join(page.get_text() for page in doc)
         doc.close()
-
     except Exception as e:
-
-        st.error(f"PDF read error: {e}")
-
+        print(f"PDF read error: {e}")
         return ""
 
-
-    # If empty → OCR
-
-    if len(text.strip()) == 0:
-
-        st.warning(f"OCR running on {os.path.basename(pdf_path)}")
-
+    # Only use OCR if text is extremely short
+    if len(text.strip()) < 50:
+        print(f"OCR running on {os.path.basename(pdf_path)}")
         try:
-
-            if POPPLER_PATH:
-
-                images = convert_from_path(
-                    pdf_path,
-                    poppler_path=POPPLER_PATH
-                )
-
-            else:
-
-                images = convert_from_path(pdf_path)
-
-            text = "\n".join(
-                pytesseract.image_to_string(img)
-                for img in images
-            )
-
+            images = convert_from_path(pdf_path, poppler_path=POPPLER_PATH)
+            text = "\n".join(pytesseract.image_to_string(img) for img in images)
         except Exception as e:
-
-            st.error(f"OCR error: {e}")
-
+            print(f"OCR error: {e}")
             return ""
 
     return clean_text(text)
-
-
 # =====================================================
 # NVIDIA API KEY
 # =====================================================

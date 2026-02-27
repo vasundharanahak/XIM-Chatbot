@@ -14,7 +14,7 @@
  *   4. See sendToBackend() for the full request shape.
  * ─────────────────────────────────────────────────────────
  */
-
+const USE_MOCK_API = false;
 /* ── CONFIGURATION ── */
 const API_ENDPOINT = "http://localhost:8000/chat";   // ← your FastAPI URL
 const USE_MOCK_API = true;   // ← set false when backend is ready

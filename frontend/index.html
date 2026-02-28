@@ -14,16 +14,11 @@
   <!-- ── SIDEBAR ── -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
-      <div class="logo">
-        <div class="logo-mark">X</div>
-        <div class="logo-text">
-          <span class="logo-name">XIM</span>
-          <span class="logo-sub">University</span>
-        </div>
+      <img src="./ximlogo.png" alt="XIM University Logo" class="sidebar-logo" onerror="this.style.display='none'" />
+      <div class="logo-text">
+        <span class="logo-name">XIM University</span>
+        <span class="logo-sub">Semper Excelsius</span>
       </div>
-      <button class="icon-btn sidebar-close" id="sidebarClose" aria-label="Close sidebar">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-      </button>
     </div>
 
     <button class="new-chat-btn" id="newChatBtn">
@@ -31,10 +26,18 @@
       New Conversation
     </button>
 
+    <div class="ums-section">
+      <p class="ums-label">XIM University Member?</p>
+      <a href="https://ums.xim.edu.in/ums/start/login/" target="_blank" rel="noopener" class="ums-btn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Login to UMS Portal
+        <svg class="ums-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+      </a>
+      <p class="ums-hint">For students, faculty &amp; staff</p>
+    </div>
+
     <div class="history-label">Recent</div>
-    <ul class="history-list" id="historyList">
-      <!-- populated by JS -->
-    </ul>
+    <ul class="history-list" id="historyList"></ul>
 
     <div class="sidebar-footer">
       <div class="api-status" id="apiStatus">
@@ -50,33 +53,32 @@
   <!-- ── MAIN ── -->
   <main class="main">
 
-    <!-- TOP BAR -->
+    <!-- TOPBAR -->
     <header class="topbar">
-      <button class="icon-btn" id="sidebarOpen" aria-label="Open sidebar">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-      </button>
-
+      <div class="topbar-left">
+        
+      </div>
       <div class="topbar-center">
         <span class="topbar-title">Envie</span>
-        <span class="topbar-badge">NVIDIA RAG</span>
+        <span class="topbar-subtitle">XIM University Assistant</span>
       </div>
-
-      <button class="icon-btn theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
-        <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-        <svg class="moon-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-      </button>
+      <div class="topbar-right"></div>
     </header>
 
     <!-- CHAT WINDOW -->
     <section class="chat-window" id="chatWindow" role="log" aria-live="polite">
-
-      <!-- Welcome state -->
       <div class="welcome" id="welcome">
-        <div class="welcome-icon">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <div class="welcome-logo-wrap">
+          <img src="./ximlogo.png" alt="XIM University" class="welcome-logo" onerror="this.style.display='none'" />
+          <div class="welcome-logo-ring"></div>
         </div>
-        <h1 class="welcome-heading">Ask Envie anything</h1>
-        <p class="welcome-sub">Your AI guide to XIM University documents, policies, and programs.</p>
+        <h1 class="welcome-heading">Welcome to Envie</h1>
+        <p class="welcome-sub">Your AI-powered guide to XIM University — ask about programs, admissions, campus life, and more.</p>
+        <div class="welcome-divider">
+          <span></span>
+          <span class="divider-dot"></span>
+          <span></span>
+        </div>
         <div class="suggestions" id="suggestions">
           <button class="suggestion-chip" data-q="What programs does XIM University offer?">What programs does XIM offer?</button>
           <button class="suggestion-chip" data-q="What is the admission process at XIM University?">Admission process</button>
@@ -84,13 +86,10 @@
           <button class="suggestion-chip" data-q="What scholarships are available at XIM University?">Scholarships available</button>
         </div>
       </div>
-
-      <!-- Messages container -->
       <div class="messages" id="messages"></div>
-
     </section>
 
-    <!-- INPUT AREA -->
+    <!-- INPUT -->
     <footer class="input-area">
       <div class="input-wrap">
         <textarea

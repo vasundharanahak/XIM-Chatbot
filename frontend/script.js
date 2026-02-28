@@ -1,83 +1,38 @@
 /**
  * ENVIE — XIM University Chatbot
- * script.js | Vanilla JS, production-quality
- *
- * ─────────────────────────────────────────────────────────
- * TO CONNECT A FASTAPI BACKEND:
- *   1. Set API_ENDPOINT to your server URL, e.g.:
- *      const API_ENDPOINT = "http://localhost:8000/chat";
- *   2. Set USE_MOCK_API = false.
- *   3. Your FastAPI endpoint should accept POST:
- *        { "message": "...", "history": [...] }
- *      and respond with JSON:
- *        { "answer": "..." }
- *   4. See sendToBackend() for the full request shape.
- * ─────────────────────────────────────────────────────────
+ * script.js
  */
+
+/* ── CONFIG ── */
+const API_ENDPOINT = "http://localhost:8000/chat";
 const USE_MOCK_API = false;
-/* ── CONFIGURATION ── */
-const API_ENDPOINT = "http://localhost:8000/chat";   // ← your FastAPI URL
-const USE_MOCK_API = true;   // ← set false when backend is ready
-const STREAM_MOCK  = true;   // ← simulate streaming in mock mode
 
 
 /* ── DOM REFS ── */
-const chatWindow    = document.getElementById("chatWindow");
-const messagesEl    = document.getElementById("messages");
-const userInput     = document.getElementById("userInput");
-const sendBtn       = document.getElementById("sendBtn");
-const welcome       = document.getElementById("welcome");
-const themeToggle   = document.getElementById("themeToggle");
-const sidebarEl     = document.getElementById("sidebar");
-const sidebarOpen   = document.getElementById("sidebarOpen");
-const sidebarClose  = document.getElementById("sidebarClose");
-const overlay       = document.getElementById("overlay");
-const newChatBtn    = document.getElementById("newChatBtn");
-const historyList   = document.getElementById("historyList");
-const statusDot     = document.getElementById("statusDot");
-const statusText    = document.getElementById("statusText");
+const chatWindow  = document.getElementById("chatWindow");
+const messagesEl  = document.getElementById("messages");
+const userInput   = document.getElementById("userInput");
+const sendBtn     = document.getElementById("sendBtn");
+const welcome     = document.getElementById("welcome");
+const historyList = document.getElementById("historyList");
+const newChatBtn  = document.getElementById("newChatBtn");
+const statusDot   = document.getElementById("statusDot");
+const statusText  = document.getElementById("statusText");
 
 
 /* ── STATE ── */
-let isLoading        = false;
-let conversationHistory = [];   // { role: "user"|"assistant", content: "..." }
-let allConversations = [];      // saved sessions for history panel
+let isLoading = false;
+let conversationHistory = [];
+let allConversations = [];
 let currentSessionId = Date.now();
 
 
-/* ── THEME ── */
-const savedTheme = localStorage.getItem("theme") || "light";
-document.documentElement.setAttribute("data-theme", savedTheme);
-
-themeToggle.addEventListener("click", () => {
-  const current = document.documentElement.getAttribute("data-theme");
-  const next = current === "dark" ? "light" : "dark";
-  document.documentElement.setAttribute("data-theme", next);
-  localStorage.setItem("theme", next);
-});
-
-
-/* ── SIDEBAR TOGGLE ── */
-function openSidebar() {
-  sidebarEl.classList.add("open");
-  overlay.classList.add("visible");
-}
-function closeSidebar() {
-  sidebarEl.classList.remove("open");
-  overlay.classList.remove("visible");
-}
-sidebarOpen.addEventListener("click", openSidebar);
-sidebarClose.addEventListener("click", closeSidebar);
-overlay.addEventListener("click", closeSidebar);
-
-
-/* ── NEW CHAT ── */
+/* =========================================================
+   CHAT HISTORY
+   ========================================================= */
 newChatBtn.addEventListener("click", () => {
-  if (conversationHistory.length > 0) {
-    saveCurrentSession();
-  }
+  if (conversationHistory.length > 0) saveCurrentSession();
   startNewSession();
-  closeSidebar();
 });
 
 function startNewSession() {
@@ -87,20 +42,17 @@ function startNewSession() {
   welcome.style.display = "flex";
   userInput.value = "";
   updateSendBtn();
+  userInput.focus();
 }
 
 function saveCurrentSession() {
   if (conversationHistory.length === 0) return;
   const firstUserMsg = conversationHistory.find(m => m.role === "user");
-  const title = firstUserMsg
-    ? truncate(firstUserMsg.content, 40)
-    : "Conversation";
+  const title = firstUserMsg ? truncate(firstUserMsg.content, 40) : "Conversation";
   allConversations.unshift({ id: currentSessionId, title, messages: [...conversationHistory] });
   renderHistory();
 }
 
-
-/* ── HISTORY ── */
 function renderHistory() {
   historyList.innerHTML = "";
   allConversations.forEach(session => {
@@ -114,38 +66,27 @@ function renderHistory() {
 }
 
 function loadSession(session) {
-  if (conversationHistory.length > 0 && session.id !== currentSessionId) {
-    saveCurrentSession();
-  }
+  if (conversationHistory.length > 0) saveCurrentSession();
   currentSessionId = session.id;
   conversationHistory = [...session.messages];
-
   messagesEl.innerHTML = "";
   welcome.style.display = "none";
-
-  conversationHistory.forEach(msg => {
-    appendBubble(msg.role === "user" ? "user" : "ai", msg.content, false);
-  });
-
-  // highlight active
-  document.querySelectorAll(".history-item").forEach(el => {
-    el.classList.toggle("active", el.textContent === truncate(session.messages.find(m=>m.role==="user")?.content ?? "", 40));
-  });
-
-  closeSidebar();
+  conversationHistory.forEach(msg =>
+    appendBubble(msg.role === "user" ? "user" : "ai", msg.content, false)
+  );
   scrollToBottom();
 }
 
 
-/* ── AUTO-RESIZE TEXTAREA ── */
+/* =========================================================
+   INPUT
+   ========================================================= */
 userInput.addEventListener("input", () => {
   userInput.style.height = "auto";
   userInput.style.height = Math.min(userInput.scrollHeight, 160) + "px";
   updateSendBtn();
 });
 
-
-/* ── SEND ON ENTER (Shift+Enter = newline) ── */
 userInput.addEventListener("keydown", e => {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
@@ -161,8 +102,6 @@ function updateSendBtn() {
   sendBtn.disabled = !userInput.value.trim() || isLoading;
 }
 
-
-/* ── SUGGESTION CHIPS ── */
 document.getElementById("suggestions").addEventListener("click", e => {
   const chip = e.target.closest(".suggestion-chip");
   if (!chip) return;
@@ -172,49 +111,37 @@ document.getElementById("suggestions").addEventListener("click", e => {
 });
 
 
-/* ── HANDLE SEND ── */
+/* =========================================================
+   SEND MESSAGE
+   ========================================================= */
 async function handleSend() {
   const text = userInput.value.trim();
   if (!text || isLoading) return;
 
-  // Hide welcome
   welcome.style.display = "none";
-
-  // Add user message
   appendBubble("user", text);
   conversationHistory.push({ role: "user", content: text });
 
-  // Clear input
   userInput.value = "";
   userInput.style.height = "auto";
   updateSendBtn();
 
-  // Show typing
   const typingEl = showTyping();
   isLoading = true;
   updateSendBtn();
 
   try {
-    let answer;
-    if (USE_MOCK_API) {
-      answer = await mockApiCall(text);
-    } else {
-      answer = await sendToBackend(text);
-    }
+    const answer = USE_MOCK_API
+      ? await mockApiCall(text)
+      : await sendToBackend(text);
 
     removeTyping(typingEl);
-
-    if (STREAM_MOCK && USE_MOCK_API) {
-      await streamBubble("ai", answer);
-    } else {
-      appendBubble("ai", answer);
-    }
-
+    await streamBubble("ai", answer);
     conversationHistory.push({ role: "assistant", content: answer });
 
   } catch (err) {
     removeTyping(typingEl);
-    appendBubble("ai", `⚠️ Sorry, something went wrong: ${err.message}`);
+    appendBubble("ai", `⚠️ Something went wrong: ${err.message}`);
   } finally {
     isLoading = false;
     updateSendBtn();
@@ -223,7 +150,61 @@ async function handleSend() {
 }
 
 
-/* ── APPEND BUBBLE ── */
+/* =========================================================
+   BACKEND
+   ========================================================= */
+async function sendToBackend(message) {
+  setApiStatus("connecting");
+
+  const response = await fetch(API_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message,
+      history: conversationHistory.slice(-10),
+    }),
+  });
+
+  if (!response.ok) {
+    setApiStatus("error");
+    throw new Error(`Server error ${response.status}`);
+  }
+
+  setApiStatus("connected");
+  const data = await response.json();
+  return data.answer ?? data.response ?? "No response from server.";
+}
+
+async function pingBackend() {
+  if (USE_MOCK_API) return;
+  try {
+    const res = await fetch(API_ENDPOINT.replace("/chat", "/health"));
+    setApiStatus(res.ok ? "connected" : "error");
+  } catch {
+    setApiStatus("disconnected");
+  }
+}
+pingBackend();
+
+function setApiStatus(state) {
+  statusDot.className = "status-dot";
+  if (state === "connected") {
+    statusDot.classList.add("connected");
+    statusText.textContent = "Backend: Connected";
+  } else if (state === "connecting") {
+    statusText.textContent = "Backend: Connecting…";
+  } else if (state === "error") {
+    statusDot.classList.add("error");
+    statusText.textContent = "Backend: Error";
+  } else {
+    statusText.textContent = "Backend: Not connected";
+  }
+}
+
+
+/* =========================================================
+   BUBBLES
+   ========================================================= */
 function appendBubble(role, content, animate = true) {
   const row = document.createElement("div");
   row.className = `message-row ${role}`;
@@ -236,6 +217,7 @@ function appendBubble(role, content, animate = true) {
   const bubble = document.createElement("div");
   bubble.className = "bubble";
   bubble.innerHTML = parseMarkdown(content);
+  if (role === "ai") addCopyButton(bubble, content);
 
   const time = document.createElement("span");
   time.className = "msg-time";
@@ -256,8 +238,6 @@ function appendBubble(role, content, animate = true) {
   return row;
 }
 
-
-/* ── STREAM BUBBLE (simulated) ── */
 async function streamBubble(role, fullText) {
   const row = document.createElement("div");
   row.className = `message-row ${role}`;
@@ -282,17 +262,32 @@ async function streamBubble(role, fullText) {
   const words = fullText.split(" ");
   for (let i = 0; i < words.length; i++) {
     displayed += (i === 0 ? "" : " ") + words[i];
-    bubble.innerHTML = parseMarkdown(displayed) + '<span class="cursor">▌</span>';
+    bubble.innerHTML = parseMarkdown(displayed) + '<span style="opacity:0.5">▌</span>';
     scrollToBottom();
-    await sleep(28 + Math.random() * 22);
+    await sleep(20 + Math.random() * 15);
   }
+
   bubble.innerHTML = parseMarkdown(fullText);
+  addCopyButton(bubble, fullText);
   scrollToBottom();
-  return row;
 }
 
+function addCopyButton(bubble, content) {
+  const actions = document.createElement("div");
+  actions.className = "bubble-actions";
+  const btn = document.createElement("button");
+  btn.className = "copy-btn";
+  btn.textContent = "Copy";
+  btn.addEventListener("click", () => {
+    navigator.clipboard.writeText(content).then(() => {
+      btn.textContent = "Copied!";
+      setTimeout(() => btn.textContent = "Copy", 1500);
+    });
+  });
+  actions.appendChild(btn);
+  bubble.appendChild(actions);
+}
 
-/* ── TYPING INDICATOR ── */
 function showTyping() {
   const row = document.createElement("div");
   row.className = "typing-row";
@@ -302,8 +297,7 @@ function showTyping() {
       <div class="typing-dot"></div>
       <div class="typing-dot"></div>
       <div class="typing-dot"></div>
-    </div>
-  `;
+    </div>`;
   messagesEl.appendChild(row);
   scrollToBottom();
   return row;
@@ -314,13 +308,13 @@ function removeTyping(el) {
 }
 
 
-/* ── SCROLL ── */
+/* =========================================================
+   HELPERS
+   ========================================================= */
 function scrollToBottom() {
   chatWindow.scrollTop = chatWindow.scrollHeight;
 }
 
-
-/* ── HELPERS ── */
 function formatTime(date) {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
@@ -333,145 +327,42 @@ function sleep(ms) {
   return new Promise(r => setTimeout(r, ms));
 }
 
-/** Minimal markdown parser (bold, italic, code, links) */
 function parseMarkdown(text) {
   if (!text) return "";
-  // Escape HTML first
-  let safe = text
+  let s = text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
-
-  // Code blocks
-  safe = safe.replace(/```([\s\S]*?)```/g, (_, c) => `<pre><code>${c.trim()}</code></pre>`);
-  // Inline code
-  safe = safe.replace(/`([^`]+)`/g, "<code>$1</code>");
-  // Bold
-  safe = safe.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-  // Italic
-  safe = safe.replace(/\*(.+?)\*/g, "<em>$1</em>");
-  // Links
-  safe = safe.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
-  // Newlines → paragraphs
-  const paragraphs = safe.split(/\n{2,}/);
-  if (paragraphs.length > 1) {
-    safe = paragraphs.map(p => `<p>${p.replace(/\n/g, "<br>")}</p>`).join("");
-  } else {
-    safe = safe.replace(/\n/g, "<br>");
-  }
-  return safe;
+  s = s.replace(/```([\s\S]*?)```/g, (_, c) => `<pre><code>${c.trim()}</code></pre>`);
+  s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
+  s = s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+  s = s.replace(/\*(.+?)\*/g, "<em>$1</em>");
+  s = s.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  const paras = s.split(/\n{2,}/);
+  return paras.length > 1
+    ? paras.map(p => `<p>${p.replace(/\n/g, "<br>")}</p>`).join("")
+    : s.replace(/\n/g, "<br>");
 }
 
 
-/* ─────────────────────────────────────────────────────────
-   BACKEND CONNECTION
-   ─────────────────────────────────────────────────────────
-
-   sendToBackend() sends the user's message + conversation
-   history to your FastAPI server.
-
-   Expected FastAPI route (example):
-
-     @app.post("/chat")
-     async def chat(req: ChatRequest):
-         # RAG logic here (your existing chatbot.py logic)
-         return {"answer": "..."}
-
-     class ChatRequest(BaseModel):
-         message: str
-         history: list[dict]   # [{role, content}, ...]
-
-   To enable streaming from FastAPI:
-     1. Use StreamingResponse in FastAPI.
-     2. Replace the fetch below with an EventSource / SSE reader.
-     3. Update streamBubble() to consume the stream in real-time.
-   ───────────────────────────────────────────────────────── */
-async function sendToBackend(message) {
-  setApiStatus("connecting");
-
-  const payload = {
-    message,
-    history: conversationHistory.slice(-10),   // last 10 turns for context
-  };
-
-  const response = await fetch(API_ENDPOINT, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    setApiStatus("error");
-    const err = await response.text();
-    throw new Error(`Server error ${response.status}: ${err}`);
-  }
-
-  setApiStatus("connected");
-  const data = await response.json();
-  return data.answer ?? data.response ?? data.message ?? "No response from server.";
-}
-
-
-/* ── API STATUS INDICATOR ── */
-function setApiStatus(state) {
-  statusDot.className = "status-dot";
-  if (state === "connected") {
-    statusDot.classList.add("connected");
-    statusText.textContent = "Backend: Connected";
-  } else if (state === "connecting") {
-    statusText.textContent = "Backend: Connecting…";
-  } else if (state === "error") {
-    statusDot.classList.add("error");
-    statusText.textContent = "Backend: Error";
-  } else {
-    statusText.textContent = "Backend: Not connected";
-  }
-}
-
-/* Call once on load to show ping status */
-async function pingBackend() {
-  if (USE_MOCK_API) return;
-  try {
-    const res = await fetch(API_ENDPOINT.replace("/chat", "/health"), { method: "GET" });
-    setApiStatus(res.ok ? "connected" : "error");
-  } catch {
-    setApiStatus("disconnected");
-  }
-}
-pingBackend();
-
-
-/* ─────────────────────────────────────────────────────────
-   MOCK API  (remove when backend is live)
-   ─────────────────────────────────────────────────────────
-   Replace this with sendToBackend() when your FastAPI
-   server is running.
-   ───────────────────────────────────────────────────────── */
+/* =========================================================
+   MOCK API
+   ========================================================= */
 const MOCK_RESPONSES = [
-  "XIM University offers a variety of postgraduate and doctoral programs including MBA, PGDM, PhD, and specialized courses in Human Resource Management, Rural Management, and Business Management.",
-  "The admission process at XIM University typically involves clearing a national entrance exam (like CAT/XAT), followed by a group discussion and personal interview round. Check the official admissions page for current cycle deadlines.",
-  "XIM University is located in Bhubaneswar, Odisha. The campus features state-of-the-art facilities including a library, sports complex, hostels, cafeteria, and fully equipped classrooms with modern learning technology.",
-  "XIM University offers merit-based scholarships and need-based financial aid. Specific schemes vary by program. Please consult the financial aid office or the official XIM website for updated scholarship criteria.",
-  "The Faculty at XIM University comprises experienced academics and industry practitioners. Many faculty members hold doctoral degrees from reputed institutions and have published in leading journals.",
-  "I found relevant information in the university documents. XIM University emphasizes value-based education rooted in Jesuit tradition, focusing on holistic development of students beyond just academic excellence.",
-  "Based on the documents, XIM University's MBA program spans two years and covers core management disciplines with electives in your area of specialization. The curriculum is regularly updated in consultation with industry leaders.",
+  "XIM University offers MBA, PGDM, PhD, and specialized programs in HRM, Rural Management, and Business Management.",
+  "Admissions involve a national entrance exam (CAT/XAT), followed by GD and PI rounds.",
+  "Our campus in Bhubaneswar has a library, sports complex, hostels, cafeteria, and modern classrooms.",
+  "We offer merit-based and need-based scholarships. Contact the financial aid office for details.",
 ];
-
 let mockIdx = 0;
 async function mockApiCall(message) {
-  await sleep(1200 + Math.random() * 800);
+  await sleep(1200 + Math.random() * 600);
   const lc = message.toLowerCase();
-
   if (lc.includes("program") || lc.includes("course")) return MOCK_RESPONSES[0];
   if (lc.includes("admission") || lc.includes("apply")) return MOCK_RESPONSES[1];
   if (lc.includes("campus") || lc.includes("facilit")) return MOCK_RESPONSES[2];
-  if (lc.includes("scholarship") || lc.includes("fee") || lc.includes("financial")) return MOCK_RESPONSES[3];
-  if (lc.includes("faculty") || lc.includes("professor")) return MOCK_RESPONSES[4];
-  if (lc.includes("mba") || lc.includes("curriculum")) return MOCK_RESPONSES[6];
-
-  const r = MOCK_RESPONSES[mockIdx % MOCK_RESPONSES.length];
-  mockIdx++;
-  return r;
+  if (lc.includes("scholarship") || lc.includes("fee")) return MOCK_RESPONSES[3];
+  return MOCK_RESPONSES[mockIdx++ % MOCK_RESPONSES.length];
 }
 
 

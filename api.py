@@ -6,6 +6,7 @@ import platform
 
 from pathlib import Path
 from pdf2image import convert_from_path
+from bs4 import BeautifulSoup
 
 import fitz
 import pytesseract
@@ -83,9 +84,20 @@ def extract_pdf(pdf_path):
     return clean_text(text)
 
 
+# ── HTML EXTRACTION ──
+def extract_html(raw_html):
+    try:
+        soup = BeautifulSoup(raw_html, "html.parser")
+        for tag in soup(["script", "style", "nav", "footer", "header"]):
+            tag.decompose()
+        text = soup.get_text(separator=" ")
+        return clean_text(text)
+    except Exception as e:
+        print(f"HTML parse error: {e}")
+        return ""
+
+
 # ── NVIDIA API KEY ──
-# Set this before running: set NVIDIA_API_KEY=your_key (Windows)
-#                          export NVIDIA_API_KEY=your_key (Mac/Linux)
 NVIDIA_API_KEY = os.environ.get("NVIDIA_API_KEY", "")
 if not NVIDIA_API_KEY:
     raise RuntimeError("NVIDIA_API_KEY environment variable not set!")
@@ -93,7 +105,7 @@ if not NVIDIA_API_KEY:
 
 # ── LOAD MODELS ──
 print("Loading models...")
-llm = ChatNVIDIA(model="meta/llama-3.3-70b-instruct")
+llm = ChatNVIDIA(model="meta/llama-3.3-70b-instruct", temperature=0)
 embedder = NVIDIAEmbeddings(model="nvidia/nv-embedqa-e5-v5", model_type="passage")
 print("Models loaded.")
 
@@ -107,21 +119,48 @@ def load_vectorstore():
 
     print("Building vectorstore from documents...")
     raw_docs = []
-    pdf_files = glob.glob(f"{DOCS_DIR}/*.pdf")
-    txt_files = glob.glob(f"{DOCS_DIR}/*.txt")
+
+    pdf_files  = glob.glob(f"{DOCS_DIR}/*.pdf")
+    txt_files  = glob.glob(f"{DOCS_DIR}/*.txt")
+    html_files = glob.glob(f"{DOCS_DIR}/*.html") + glob.glob(f"{DOCS_DIR}/*.htm")
+
+    if len(pdf_files) == 0 and len(txt_files) == 0 and len(html_files) == 0:
+        raise RuntimeError(f"No PDF, TXT or HTML files found in {DOCS_DIR}")
 
     for file in pdf_files:
         print(f"Processing {os.path.basename(file)}")
         text = extract_pdf(file)
         if text:
-            raw_docs.append(Document(page_content=text, metadata={"source": file}))
+            raw_docs.append(Document(page_content=text, metadata={"source": os.path.basename(file)}))
+        else:
+            print(f"  ⚠ Skipped (no text extracted): {os.path.basename(file)}")
 
     for file in txt_files:
+        print(f"Processing {os.path.basename(file)}")
         text = Path(file).read_text(encoding="utf-8", errors="ignore")
-        raw_docs.append(Document(page_content=clean_text(text), metadata={"source": file}))
+        if text:
+            raw_docs.append(Document(page_content=clean_text(text), metadata={"source": os.path.basename(file)}))
+        else:
+            print(f"  ⚠ Skipped (no text extracted): {os.path.basename(file)}")
+
+    for file in html_files:
+        print(f"Processing {os.path.basename(file)}")
+        raw_html = Path(file).read_text(encoding="utf-8", errors="ignore")
+        text = extract_html(raw_html)
+        if text:
+            raw_docs.append(Document(page_content=text, metadata={"source": os.path.basename(file)}))
+        else:
+            print(f"  ⚠ Skipped (no text extracted): {os.path.basename(file)}")
+
+    if len(raw_docs) == 0:
+        raise RuntimeError("No content could be extracted from any document. Check Poppler/Tesseract installation.")
+
+    print(f"Successfully extracted content from {len(raw_docs)} document(s).")
 
     splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
     docs = splitter.split_documents(raw_docs)
+    print(f"Split into {len(docs)} chunks.")
+
     vectorstore = FAISS.from_documents(docs, embedder)
 
     with open(VECTOR_STORE_PATH, "wb") as f:
@@ -133,11 +172,26 @@ def load_vectorstore():
 vectorstore = load_vectorstore()
 
 
-# ── CHAIN ──
+# ── PROMPT ──
+# ── PROMPT ──
 prompt = ChatPromptTemplate.from_messages([
-    ("system", "Answer ONLY using the provided context."),
+    ("system", """You are Envie, the official AI assistant for XIM University. You're helpful, sharp, and to the point — like a well-informed friend who works at the university.
+
+Rules:
+- Be concise but don't be robotic. Be concise but when asked about a subject, try to provide all details you are aware of. Answer politely cheerfully.
+- Be human. Write like a person, not a policy document.
+- Be structured when it helps. Use bullet points for when there are multiple distinct items to convey. But when asked for lists, do use bullet points. 
+- Be accurate. Only state facts that are clearly present in the documents provided. If something isn't there, say "I don't have that info — best to check with XIM directly!" and leave it at that. Don't mention anything about the "provided context".
+- Never fabricate names, numbers, dates, designations, or contact details. Ever.
+- Don't start answers with "Great question!", "Certainly!", "Of course!" or any filler phrase.
+- Don't reference the documents explicitly — just answer as if you already know this.
+- Always use "we", "our", "us" when referring to XIM University. Never "they" or "XIM University does/offers".
+- Match the length to the question. One-line question? One or two line answer. Complex query? Give a structured but tight response.
+"""),
     ("human", "{input}"),
 ])
+
+# ── CHAIN ──
 chain = prompt | llm | StrOutputParser()
 
 
@@ -155,10 +209,19 @@ def health():
 
 @app.post("/chat")
 def chat(req: ChatRequest):
-    retriever = vectorstore.as_retriever(search_kwargs={"k": 3})
+    retriever = vectorstore.as_retriever(search_type="mmr", search_kwargs={"k": 8, "fetch_k": 20})
+    
+    # Expand query slightly for better retrieval
+    expanded_query = f"{req.message} XIM University"
     docs = retriever.invoke(req.message)
-    context = "\n\n".join(d.page_content for d in docs)
-    final_prompt = f"Context:\n{context}\n\nQuestion:\n{req.message}\n"
+    context = "\n\n".join(
+        f"[Source: {d.metadata.get('source', 'unknown')}]\n{d.page_content}"
+        for d in docs
+    )
+    final_prompt = f"""Context from XIM University documents:
+{context}
+
+Question: {req.message}
+"""
     answer = chain.invoke({"input": final_prompt})
     return {"answer": answer}
-

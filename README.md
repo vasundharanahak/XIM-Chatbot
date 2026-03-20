@@ -34,7 +34,7 @@ Or use .env file.
 uvicorn api:app --reload
 
 ### 7. Navigate localhost
-change directory to where your front end files are located inside XIM-Chatbot
+in a new terminal, change directory to where your front end files are located inside XIM-Chatbot
 
 python -m http.server 3000
 

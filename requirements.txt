@@ -14,3 +14,5 @@ pytesseract
 pdf2image
 beautifulsoup4
 numpy
+sentence-transformers
+langchain_huggingface

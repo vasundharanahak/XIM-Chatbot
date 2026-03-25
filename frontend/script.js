@@ -1,5 +1,5 @@
 /**
- * ENVIE — XIM University Chatbot
+ * XENIA — XIM University Chatbot
  * script.js
  */
 
@@ -212,7 +212,7 @@ function appendBubble(role, content, animate = true) {
 
   const avatar = document.createElement("div");
   avatar.className = `avatar ${role}`;
-  avatar.textContent = role === "ai" ? "E" : "U";
+  avatar.textContent = role === "ai" ? "X" : "U";
 
   const bubble = document.createElement("div");
   bubble.className = "bubble";
@@ -244,7 +244,7 @@ async function streamBubble(role, fullText) {
 
   const avatar = document.createElement("div");
   avatar.className = `avatar ${role}`;
-  avatar.textContent = role === "ai" ? "E" : "U";
+  avatar.textContent = role === "ai" ? "X" : "U";
 
   const bubble = document.createElement("div");
   bubble.className = "bubble";
